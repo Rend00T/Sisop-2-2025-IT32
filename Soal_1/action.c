@@ -11,7 +11,6 @@
 #define COMBINED_FILE "Combined.txt"
 #define DECODED_FILE "Decoded.txt"
 
-// Cek nama file valid: panjang 5 (contoh: a.txt, 1.txt)
 int is_valid_filename(const char *name) {
     return strlen(name) == 5 && name[1] == '.' && name[2] == 't' && name[3] == 'x' && name[4] == 't' &&
            ((name[0] >= '0' && name[0] <= '9') || (name[0] >= 'a' && name[0] <= 'z'));
@@ -65,7 +64,6 @@ void filter_files() {
     }
     closedir(clues_dir);
 
-    // Delete unfiltered files
     DIR *main_dir = opendir(CLUES_FOLDER);
     while ((folder_entry = readdir(main_dir)) != NULL) {    
         if (folder_entry->d_type != DT_DIR || strcmp(folder_entry->d_name, ".") == 0 || strcmp(folder_entry->d_name, "..") == 0)
@@ -163,7 +161,6 @@ void combine_files() {
     fclose(combined);
 }
 
-// Fungsi ROT13
 char rot13(char ch) {
     if ('a' <= ch && ch <= 'z') return 'a' + (ch - 'a' + 13) % 26;
     if ('A' <= ch && ch <= 'Z') return 'A' + (ch - 'A' + 13) % 26;
