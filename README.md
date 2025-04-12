@@ -3,7 +3,7 @@
 - Ananda Fitri Wibowo (5027241057)
 - Raihan Fahri Ghazali (5027241061)
 
-Soal 1
+# Soal 1
 	- a. Downloading the Clues
 	- b. Filtering the Files
 	- c. Combine the File Content
