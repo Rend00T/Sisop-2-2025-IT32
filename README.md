@@ -1,4 +1,8 @@
 # Sisop-2-2025-IT32
+- Alif Bima Permadani (5027241020)
+- Ananda Fitri Wibowo (5027241057)
+- Raihan Fahri Ghazali (5027241061)
+
 - Soal 1
 	- a. Downloading the Clues
 	- b. Filtering the Files
