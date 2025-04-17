@@ -2,3 +2,9 @@
 - Alif Bima Permadani (5027241020)
 - Ananda Fitri Wibowo (5027241057)
 - Raihan Fahri Ghazali (5027241061)
+
+| No | Nama                   | NRP         |
+|----|------------------------|-------------|
+| 1  | Alif Bima Permadani    | 5027241020  |
+| 2  | Ananda Fitri Wibowo    | 5027241057  |
+| 3  | Raihan Fahri Ghazali   | 5027241061  |
