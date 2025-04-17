@@ -10,10 +10,11 @@
 #define FILTERED_FOLDER "Filtered"
 #define COMBINED_FILE "Combined.txt"
 #define DECODED_FILE "Decoded.txt"
+#define ZIP_FILE "Clues.zip"
 
-int is_valid_filename(const char *name) {
-    return strlen(name) == 5 && name[1] == '.' && name[2] == 't' && name[3] == 'x' && name[4] == 't' &&
-           ((name[0] >= '0' && name[0] <= '9') || (name[0] >= 'a' && name[0] <= 'z'));
+int exists(const char *path) {
+    struct stat st;
+    return stat(path, &st) == 0;
 }
 
 void create_filtered_folder() {
@@ -23,12 +24,44 @@ void create_filtered_folder() {
     }
 }
 
+int is_valid_filename(const char *name) {
+    return strlen(name) == 5 && name[1] == '.' && name[2] == 't' && name[3] == 'x' && name[4] == 't' &&
+           ((name[0] >= '0' && name[0] <= '9') || (name[0] >= 'a' && name[0] <= 'z'));
+}
+
+void setup_clues() {
+    if (exists(CLUES_FOLDER)) {
+        printf("Folder Clues sudah ada. Melewati proses unduh.\n");
+        return;
+    }
+
+    printf("Mengunduh Clues.zip dari Google Drive...\n");
+
+    const char *gdrive_download_link = "https://drive.google.com/uc?export=download&id=1xFn1OBJUuSdnApDseEczKhtNzyGekauK";
+
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd), "wget -q --show-progress -O %s \"%s\"", ZIP_FILE, gdrive_download_link);
+    if (system(cmd) != 0) {
+        fprintf(stderr, "Gagal mengunduh Clues.zip\n");
+        return;
+    }
+
+    printf("Ekstraksi Clues.zip...\n");
+    if (system("unzip -q Clues.zip") != 0) {
+        fprintf(stderr, "Gagal mengekstrak Clues.zip\n");
+        return;
+    }
+
+    remove(ZIP_FILE);
+    printf("Selesai mengunduh dan mengekstrak Clues.zip\n");
+}
+
 void filter_files() {
     create_filtered_folder();
 
     DIR *clues_dir = opendir(CLUES_FOLDER);
     if (!clues_dir) {
-        perror("Failed to open Clues directory");
+        perror("Gagal membuka direktori Clues");
         return;
     }
 
@@ -64,8 +97,8 @@ void filter_files() {
     }
     closedir(clues_dir);
 
-    DIR *main_dir = opendir(CLUES_FOLDER);
-    while ((folder_entry = readdir(main_dir)) != NULL) {    
+    clues_dir = opendir(CLUES_FOLDER);
+    while ((folder_entry = readdir(clues_dir)) != NULL) {
         if (folder_entry->d_type != DT_DIR || strcmp(folder_entry->d_name, ".") == 0 || strcmp(folder_entry->d_name, "..") == 0)
             continue;
 
@@ -76,12 +109,10 @@ void filter_files() {
 
         struct dirent *file_entry;
         while ((file_entry = readdir(subfolder)) != NULL) {
-            if (file_entry->d_type == DT_REG) {
-                if (!is_valid_filename(file_entry->d_name)) {
-                    char path[512];
-                    snprintf(path, sizeof(path), "%s/%s", subfolder_path, file_entry->d_name);
-                    remove(path);
-                }
+            if (file_entry->d_type == DT_REG && !is_valid_filename(file_entry->d_name)) {
+                char path[512];
+                snprintf(path, sizeof(path), "%s/%s", subfolder_path, file_entry->d_name);
+                remove(path);
             }
         }
         closedir(subfolder);
@@ -95,7 +126,7 @@ int compare(const void *a, const void *b) {
 void combine_files() {
     FILE *combined = fopen(COMBINED_FILE, "w");
     if (!combined) {
-        perror("Failed to create Combined.txt");
+        perror("Gagal membuat Combined.txt");
         return;
     }
 
@@ -172,7 +203,7 @@ void decode_file() {
     FILE *out = fopen(DECODED_FILE, "w");
 
     if (!in || !out) {
-        perror("Failed to open Combined.txt or create Decoded.txt");
+        perror("Gagal membuka Combined.txt atau membuat Decoded.txt");
         if (in) fclose(in);
         if (out) fclose(out);
         return;
@@ -188,19 +219,25 @@ void decode_file() {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 3 || strcmp(argv[1], "-m") != 0) {
-        fprintf(stderr, "Usage: %s -m [Filter|Combine|Decode]\n", argv[0]);
-        return 1;
+    if (argc == 1) {
+        setup_clues(); 
+        return 0;
     }
 
-    if (strcmp(argv[2], "Filter") == 0) {
-        filter_files();
-    } else if (strcmp(argv[2], "Combine") == 0) {
-        combine_files();
-    } else if (strcmp(argv[2], "Decode") == 0) {
-        decode_file();
+    if (argc == 3 && strcmp(argv[1], "-m") == 0) {
+        if (strcmp(argv[2], "Filter") == 0) {
+            filter_files();
+        } else if (strcmp(argv[2], "Combine") == 0) {
+            combine_files();
+        } else if (strcmp(argv[2], "Decode") == 0) {
+            decode_file();
+        } else {
+            fprintf(stderr, "Mode tidak valid. Gunakan Filter, Combine, atau Decode.\n");
+            return 1;
+        }
     } else {
-        fprintf(stderr, "Invalid mode. Use Filter, Combine, or Decode.\n");
+        fprintf(stderr, "Usage:\n  %s           (untuk download dan ekstrak Clues)\n", argv[0]);
+        fprintf(stderr, "  %s -m [Filter|Combine|Decode]\n", argv[0]);
         return 1;
     }
 
