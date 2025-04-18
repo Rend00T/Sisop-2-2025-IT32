@@ -221,6 +221,6 @@ Setelah melihat hasil dari Decoded.txt, selanjutnya output dimasukkan kedalam Lo
 ![image](https://github.com/user-attachments/assets/64b30716-0f6d-41e1-9595-bfb2d40b7522)
 
 
-###Error Handling 
+### Error Handling 
 ### Unzip Error 
-![image](https://github.com/Rend00T/Sisop-2-2025-IT32/issues/1#issue-3004893788)
+![image]([https://github.com/Rend00T/Sisop-2-2025-IT32/issues/1#issue-3004893788](https://github.com/Rend00T/Sisop-2-2025-IT32/issues/1))
