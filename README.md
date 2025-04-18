@@ -225,4 +225,7 @@ Setelah melihat hasil dari Decoded.txt, selanjutnya output dimasukkan kedalam Lo
 ### Unzip Error 
 ![image]([https://github.com/Rend00T/Sisop-2-2025-IT32/issues/1#issue-3004893788](https://github.com/Rend00T/Sisop-2-2025-IT32/issues/1))
 
-Error disebabkan oleh pada bagian code seharusnya dimasukkan link google drive jadi tidak hanya mendownload file yang bernama "Clues.zip" tetapi mendownload link drive nya seperti pada bagian code berikut 
+Error disebabkan oleh pada bagian code seharusnya dimasukkan link google drive jadi tidak hanya mendownload file yang bernama "Clues.zip" tetapi mendownload link drive nya seperti pada bagian code berikut.
+![Image](https://github.com/user-attachments/assets/5e9aeb03-8f5b-4fdf-a421-d3d8e21dc609)
+
+dan sehingga menghasilkan hasil sebagai berikut ketika menjalankan menggunakan ./action.  
