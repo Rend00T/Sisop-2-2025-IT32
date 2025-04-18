@@ -229,3 +229,288 @@ Error disebabkan oleh pada bagian code seharusnya dimasukkan link google drive j
 ![Image](https://github.com/user-attachments/assets/13c79399-159e-4d7a-957d-75962f0ef67f)
 dan sehingga menghasilkan hasil sebagai berikut ketika menjalankan menggunakan ./action.  
 ![Image](https://github.com/user-attachments/assets/9f54cc2d-f4ef-49d4-bc8f-5ee99f865696)
+
+# Soal 2
+Solved by. 057_Ananda Fitri Wibowo
+## A. Sebelum Revisi
+### a. Mengetahui semua aktivitas user (list)
+Mendapatkan PID, command, CPU usage, dan memory usage dari /proc.
+```
+void list_processes(const char *user) {
+    int uid = get_uid(user);
+    if (uid < 0) return;
+    DIR *d = opendir("/proc");
+    struct dirent *e;
+    printf("PID\tCMD\tCPU\tMEM\n");
+    while ((e = readdir(d))) {
+        if (!is_numeric(e->d_name)) continue;
+        char path[512];
+        if (snprintf(path, sizeof(path), "/proc/%s/status", e->d_name) >= sizeof(path)) continue;
+        FILE *f = fopen(path, "r");
+        if (!f) continue;
+        char line[256]; int p_uid = -1;
+        while (fgets(line, sizeof(line), f))
+            if (sscanf(line, "Uid:\t%d", &p_uid) == 1) break;
+        fclose(f);
+        if (p_uid != uid) continue;
+
+        char cmd[64] = "[gak ketauan]";
+        snprintf(path, sizeof(path), "/proc/%s/cmdline", e->d_name);
+        f = fopen(path, "r");
+        if (f) {
+            fread(cmd, 1, sizeof(cmd) - 1, f);
+            fclose(f);
+        }
+
+        float cpu = 0.0, mem = 0.0;
+        snprintf(path, sizeof(path), "/proc/%s/stat", e->d_name);
+        f = fopen(path, "r");
+        if (f) {
+            long utime, stime;
+            int dummy; char comm[64], state;
+            fscanf(f, "%d %s %c", &dummy, comm, &state);
+            for (int i = 0; i < 11; i++) fscanf(f, "%*s");
+            fscanf(f, "%ld %ld", &utime, &stime);
+            cpu = (utime + stime) / 100.0;
+            fclose(f);
+        }
+
+        snprintf(path, sizeof(path), "/proc/%s/status", e->d_name);
+        f = fopen(path, "r");
+        if (f) {
+            while (fgets(line, sizeof(line), f)) {
+                if (sscanf(line, "VmRSS: %f", &mem) == 1) {
+                    mem /= 1024.0;
+                    break;
+                }
+            }
+            fclose(f);
+        }
+
+        printf("%s\t%s\t%.1f\t%.1f MB\n", e->d_name, cmd, cpu, mem);
+    }
+    closedir(d);
+}
+```
+
+### b. Memasang mata-mata untuk mengawasi user (daemon)
+Bikin fork dan ngasih stamp ke log setiap 10 detik, menandakan user sedang diawasi.
+```
+void daemon_mode(const char *user) {
+    pid_t pid = fork();
+    if (pid < 0) return;
+    if (pid > 0) {
+        printf("[DEBUGMON] hehehhe lu gw awasin banh! '%s'~\n", user);
+        return;
+    }
+    setsid();
+    fclose(stdin); fclose(stdout); fclose(stderr);
+    while (1) {
+        log_status(user, "RUNNING");
+        sleep(10);
+    }
+}
+```
+
+### c. Menghentikan pengawasan (stop)
+(harusnya) Mematikan daemon yang menjadi pengawas user. Tapi di sini bukannya ngekill daemon, saya malah ngekill proses user, jadi terminal langsung close kalau stop dijalankan.
+```
+void kill_processes(const char *user, const char *status) {
+    int uid = get_uid(user);
+    if (uid < 0) return;
+    DIR *d = opendir("/proc");
+    struct dirent *e;
+    while ((e = readdir(d))) {
+        if (!is_numeric(e->d_name)) continue;
+        char path[512];
+        if (snprintf(path, sizeof(path), "/proc/%s/status", e->d_name) >= sizeof(path)) continue;
+        FILE *f = fopen(path, "r");
+        if (!f) continue;
+        char line[128]; int p_uid = -1;
+        while (fgets(line, sizeof(line), f))
+            if (sscanf(line, "Uid:\t%d", &p_uid) == 1) break;
+        fclose(f);
+        if (p_uid != uid) continue;
+        kill(atoi(e->d_name), SIGKILL);
+        log_status(e->d_name, status);
+    }
+    closedir(d);
+    if (strcmp(status, "FAILED") == 0)
+        printf("[DEBUGMON] semua proses '%s' udah diberesin (FAILED).\n", user);
+    else if (strcmp(status, "RUNNING") == 0)
+        printf("[DEBUGMON] proses '%s' dihentikan sementara.\n", user);
+}
+```
+
+### d. Menghentikan akses user (fail)
+(harusnya) Mencabut akses user dalam melakukan apa-apa di terminal, user tidak bisa menjalankan perintah. Tapi seperti stop tadi, saya malah matiin proses user, terminal langsung nutup.
+```
+void kill_processes(const char *user, const char *status) {
+    int uid = get_uid(user);
+    if (uid < 0) return;
+    DIR *d = opendir("/proc");
+    struct dirent *e;
+    while ((e = readdir(d))) {
+        if (!is_numeric(e->d_name)) continue;
+        char path[512];
+        if (snprintf(path, sizeof(path), "/proc/%s/status", e->d_name) >= sizeof(path)) continue;
+        FILE *f = fopen(path, "r");
+        if (!f) continue;
+        char line[128]; int p_uid = -1;
+        while (fgets(line, sizeof(line), f))
+            if (sscanf(line, "Uid:\t%d", &p_uid) == 1) break;
+        fclose(f);
+        if (p_uid != uid) continue;
+        kill(atoi(e->d_name), SIGKILL);
+        log_status(e->d_name, status);
+    }
+    closedir(d);
+    if (strcmp(status, "FAILED") == 0)
+        printf("[DEBUGMON] semua proses '%s' udah diberesin (FAILED).\n", user);
+    else if (strcmp(status, "RUNNING") == 0)
+        printf("[DEBUGMON] proses '%s' dihentikan sementara.\n", user);
+}
+```
+
+### e. Mengizinkan kembali user (revert)
+(harusnya) Memberikan akses kembali ke user. Tapi karena fail saya masih error, di sini dia cuma nge-print "Kembali normal".
+```
+void revert_mode(const char *user) {
+    printf("[DEBUGMON] oke, dah aman '%s', lanjut lanjut\n", user);
+    log_status(user, "RUNNING");
+}
+```
+
+### f. Mencatat semua ke log (daemon.log)
+Mencatat semua aktivitas yang berjalan.
+```
+void log_status(const char *proc, const char *status) {
+    FILE *fp = fopen(LOG_FILE, "a");
+    if (!fp) return;
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+    fprintf(fp, "[%02d:%02d:%04d]-[%02d:%02d:%02d]_%s_%s\n",
+        t->tm_mday, t->tm_mon+1, t->tm_year+1900,
+        t->tm_hour, t->tm_min, t->tm_sec, proc, status);
+    fclose(fp);
+}
+```
+
+### g. Dokumentasi
+![image](https://github.com/user-attachments/assets/41f6ca9d-4dc0-4215-916f-666d56e356d2)
+*stop dan fail menutup terminal
+
+## 2. Setelah Revisi
+Memperbaiki Stop, Fail, dan Revert.
+### a. Memperbaiki stop
+Sekarang, stop akan membunuh proses daemon, jadi mata-mata menghilang.
+```
+void stop_daemon(const char *user) {
+    char path[128];
+    snprintf(path, sizeof(path), "/tmp/debugmon_daemon_%s", user);
+    FILE *fp = fopen(path, "r");
+    if (!fp) return;
+    pid_t pid;
+    fscanf(fp, "%d", &pid);
+    fclose(fp);
+    if (kill(pid, SIGTERM) == 0) {
+        printf("[DEBUGMON] daemon '%s' udah dihentikan.\n", user);
+        remove(path);
+        log_status(user, "RUNNING");
+    }
+}
+```
+
+### b. Memperbaiki Fail
+Failnnya masih belum bisa, ada opsi untuk menggunakan root, namun saya lihat di soal shift 2 tidak ada perintah untuk menggunakan sudo saat menjalankan debugmon.
+```
+void fail_daemon(const char *user) {
+    pid_t pid = fork();
+    if (pid < 0) return;
+    if (pid > 0) return; // parent
+    setsid();
+    while (1) {
+        DIR *d = opendir("/proc");
+        struct dirent *e;
+        int uid = get_uid(user);
+        while ((e = readdir(d))) {
+            if (!is_numeric(e->d_name)) continue;
+            char path[512];
+            snprintf(path, sizeof(path), "/proc/%s/status", e->d_name);
+            FILE *f = fopen(path, "r");
+            if (!f) continue;
+            char line[128]; int p_uid = -1;
+            while (fgets(line, sizeof(line), f)) {
+                if (sscanf(line, "Uid:\t%d", &p_uid) == 1) break;
+            }
+            fclose(f);
+            if (p_uid != uid) continue;
+            int pid = atoi(e->d_name);
+            if (pid == getpid()) continue;
+            kill(pid, SIGKILL);
+            log_status(e->d_name, "FAILED");
+        }
+        closedir(d);
+        sleep(2);
+    }
+}
+
+void lock_user(const char *user) {
+    char cmd[256];
+    snprintf(cmd, sizeof(cmd), "pkill -u %s", user);
+    system(cmd);
+
+    char bashrc[256];
+    snprintf(bashrc, sizeof(bashrc), "/home/%s/.bashrc", user);
+    FILE *fp = fopen(bashrc, "a");
+    if (fp) {
+        fprintf(fp, "echo 'Terminal kamu dikunci oleh debugmon.'\nwhile true; do sleep 1; done\n");
+        fclose(fp);
+    }
+
+    log_status(user, "FAILED");
+    printf("[DEBUGMON] semua proses '%s' udah diberesin (FAILED).\n", user);
+    fail_daemon(user);
+}
+```
+
+### c. Memperbaiki Revert
+Kalau fail berhasil, sepertinya ini harusnya work.
+```
+void unlock_user(const char *user) {
+    char bashrc[256];
+    snprintf(bashrc, sizeof(bashrc), "/home/%s/.bashrc", user);
+    FILE *fp = fopen(bashrc, "r");
+    if (!fp) return;
+    FILE *tmp = fopen("/tmp/.bashrc_tmp", "w");
+    if (!tmp) {
+        fclose(fp);
+        return;
+    }
+    char line[512];
+    while (fgets(line, sizeof(line), fp)) {
+        if (strstr(line, "Terminal kamu dikunci") || strstr(line, "while true"))
+            continue;
+        fputs(line, tmp);
+    }
+    fclose(fp);
+    fclose(tmp);
+    rename("/tmp/.bashrc_tmp", bashrc);
+    printf("[DEBUGMON] oke, dah aman '%s', lanjut lanjut\n", user);
+    log_status(user, "RUNNING");
+}
+```
+
+### d. Dokumentasi
+![image](https://github.com/user-attachments/assets/46627bcb-4d4e-442d-a425-c825aa88ab4a)
+
+## C. Error Handling
+Perintah yang dapat dipakai untuk menjalankan Debugmon.
+~~~
+./debugmon list <user>
+./debugmon daemon <user>
+./debugmon stop <user>
+./debugmon fail <user>
+./debugmon revert <user>
+cat debugmon.log
+~~~
