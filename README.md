@@ -228,4 +228,4 @@ Error disebabkan oleh pada bagian code seharusnya dimasukkan link google drive j
 
 ![Image](https://github.com/user-attachments/assets/13c79399-159e-4d7a-957d-75962f0ef67f)
 dan sehingga menghasilkan hasil sebagai berikut ketika menjalankan menggunakan ./action.  
-
+![Image](https://github.com/user-attachments/assets/9f54cc2d-f4ef-49d4-bc8f-5ee99f865696)
